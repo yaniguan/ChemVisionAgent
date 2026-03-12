@@ -1,0 +1,46 @@
+# LoRA fine-tuning configuration for ChemVision
+# -----------------------------------------------
+# Usage:
+#   python scripts/train_lora.py --config configs/lora_train.yaml
+#
+# Switch base model to InternVL2 by changing model_name_or_path to e.g.
+#   "OpenGVLab/InternVL2-8B"
+
+# Base VLM -----------------------------------------------------------------
+base_model:
+  model_name_or_path: "llava-hf/llava-v1.6-mistral-7b-hf"
+  device: "cuda"
+  dtype: "bfloat16"          # bfloat16 recommended for A100/H100
+  max_new_tokens: 512
+  temperature: 0.0
+  use_flash_attention: true  # requires flash-attn package
+
+# LoRA hyperparameters -----------------------------------------------------
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+target_modules:
+  - "q_proj"
+  - "v_proj"
+  - "k_proj"
+  - "o_proj"
+
+# Training -----------------------------------------------------------------
+output_dir: "checkpoints/lora-v1"
+num_train_epochs: 3
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8   # effective batch = 2 * 8 = 16
+learning_rate: 2.0e-4
+
+# Dataset (JSONL files written by DatasetBuilder) --------------------------
+dataset_dir: "data/processed"
+train_split: "train"
+val_split: "val"
+
+# Weights & Biases ---------------------------------------------------------
+wandb_project: "chemvision-lora"
+wandb_run_name: "llava-1.6-lora-v1"
+wandb_tags:
+  - "llava"
+  - "lora"
+  - "chemistry"

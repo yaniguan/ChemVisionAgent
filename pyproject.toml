@@ -1,0 +1,63 @@
+[project]
+name = "chemvision-agent"
+version = "0.1.0"
+description = "A multimodal scientific image reasoning platform"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "transformers>=4.40.0",
+    "peft>=0.10.0",
+    "torch>=2.2.0",
+    "pillow>=10.0.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.7.0",
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "httpx>=0.27.0",
+    # fine-tuning + training utilities
+    "accelerate>=0.29.0",
+    "wandb>=0.17.0",
+    "pyyaml>=6.0",
+    # data pipeline
+    "ase>=3.23.0",
+    "matplotlib>=3.8.0",
+    "numpy>=1.26.0",
+    "pypdf>=4.2.0",
+    "anthropic>=0.40.0",
+    "datasets>=2.19.0",
+    "requests>=2.32.0",
+    "streamlit>=1.55.0",
+    "pandas>=2.3.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[project.scripts]
+chemvision = "chemvision.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chemvision"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

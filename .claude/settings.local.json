@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv venv:*)",
+      "Bash(uv pip:*)",
+      "Bash(uv run:*)",
+      "Skill(claude-api)",
+      "Bash(python -m pytest tests/ -v 2>&1)",
+      "Bash(python -m pytest tests/test_agent.py tests/test_agent_impl.py -x -q 2>&1 | head -80)"
+    ]
+  }
+}
