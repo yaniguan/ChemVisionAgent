@@ -6,7 +6,8 @@
       "Bash(uv run:*)",
       "Skill(claude-api)",
       "Bash(python -m pytest tests/ -v 2>&1)",
-      "Bash(python -m pytest tests/test_agent.py tests/test_agent_impl.py -x -q 2>&1 | head -80)"
+      "Bash(python -m pytest tests/test_agent.py tests/test_agent_impl.py -x -q 2>&1 | head -80)",
+      "Bash(tree -L 3 -I '__pycache__|*.pyc|.venv' /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent 2>/dev/null || find /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent -type f -name \"*.py\" | sort)"
     ]
   }
 }
