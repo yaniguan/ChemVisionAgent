@@ -29,9 +29,17 @@ dependencies = [
     "requests>=2.32.0",
     "streamlit>=1.55.0",
     "pandas>=2.3.3",
+    # molecular cheminformatics
+    "rdkit>=2024.3.0",
+    # vector retrieval
+    "chromadb>=0.5.0",
 ]
 
 [project.optional-dependencies]
+gpu = [
+    # equivariant force-field (MACE-MP-0 universal potential)
+    "mace-torch>=0.3.0",
+]
 dev = [
     "pytest>=8.2.0",
     "pytest-asyncio>=0.23.0",
@@ -61,3 +69,6 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "network: tests that require live network access (deselect with -m 'not network')",
+]

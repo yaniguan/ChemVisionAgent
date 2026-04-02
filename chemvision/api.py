@@ -9,7 +9,9 @@ GET  /health    — liveness check
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -21,24 +23,43 @@ from chemvision.agent.agent import ChemVisionAgent
 from chemvision.agent.config import AgentConfig
 from chemvision.agent.report import AnalysisReport
 
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# App state
+# Thread-safe app state
 # ---------------------------------------------------------------------------
 
-_STATE: dict[str, Any] = {
-    "agent": None,
-    "latest_audit": None,
-}
+_MAX_IMAGE_BYTES = 20 * 1024 * 1024  # 20 MB per image
+_ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
+
+
+class _AppState:
+    """Thread-safe container for singleton agent and latest audit."""
+
+    def __init__(self) -> None:
+        self._lock = asyncio.Lock()
+        self.agent: ChemVisionAgent | None = None
+        self.latest_audit: dict[str, Any] | None = None
+
+    async def set_audit(self, report: dict[str, Any]) -> None:
+        async with self._lock:
+            self.latest_audit = report
+
+    async def get_audit(self) -> dict[str, Any] | None:
+        async with self._lock:
+            return self.latest_audit
+
+
+_STATE = _AppState()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     """Initialise the agent once at startup; clean up on shutdown."""
     cfg = AgentConfig()  # reads ANTHROPIC_API_KEY from env
-    _STATE["agent"] = ChemVisionAgent(cfg)
+    _STATE.agent = ChemVisionAgent(cfg)
     yield
-    _STATE["agent"] = None
+    _STATE.agent = None
 
 
 app = FastAPI(
@@ -120,28 +141,34 @@ async def analyze(body: AnalyzeRequest) -> AnalyzeResponse:
     and synthesises a final structured answer.  Any intermediate skill
     confidence below 0.75 sets ``low_confidence_flag`` on the response.
     """
-    agent: ChemVisionAgent | None = _STATE.get("agent")
+    agent = _STATE.agent
     if agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialised.")
 
-    # Validate image paths exist
-    missing = [p for p in body.image_paths if not Path(p).exists()]
-    if missing:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Image file(s) not found: {missing}",
-        )
+    # Validate image paths: existence, extension, size
+    for p_str in body.image_paths:
+        p = Path(p_str)
+        if not p.exists():
+            raise HTTPException(status_code=422, detail=f"Image not found: {p_str}")
+        if p.suffix.lower() not in _ALLOWED_EXTENSIONS:
+            raise HTTPException(status_code=422, detail=f"Unsupported image format: {p.suffix}")
+        if p.stat().st_size > _MAX_IMAGE_BYTES:
+            raise HTTPException(status_code=422, detail=f"Image too large (>{_MAX_IMAGE_BYTES // 1024 // 1024} MB): {p_str}")
 
     try:
         report: AnalysisReport = agent.run(
             question=body.question,
             image_paths=body.image_paths,
         )
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except (ValueError, TypeError, KeyError) as exc:
+        logger.exception("Agent failed with data error")
+        raise HTTPException(status_code=422, detail=f"Analysis failed: {exc}") from exc
+    except Exception as exc:
+        logger.exception("Agent failed with unexpected error")
+        raise HTTPException(status_code=500, detail=f"Internal error: {type(exc).__name__}") from exc
 
-    # Store as latest audit report (lightweight in-memory cache)
-    _STATE["latest_audit"] = report.to_dict()
+    # Store as latest audit report (thread-safe)
+    await _STATE.set_audit(report.to_dict())
 
     return AnalyzeResponse(
         question=report.question,
@@ -168,7 +195,7 @@ async def get_audit() -> AuditResponse:
     The report is cached in memory from the most recent ``POST /analyze``
     call.  Returns 404-style JSON if no run has completed yet.
     """
-    report_dict: dict[str, Any] | None = _STATE.get("latest_audit")
+    report_dict: dict[str, Any] | None = await _STATE.get_audit()
     if report_dict is None:
         return AuditResponse(
             available=False,

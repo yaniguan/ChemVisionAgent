@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator, Union
 
 from PIL import Image
 
@@ -27,6 +27,9 @@ _PLANNER_TO_REGISTRY: dict[str, str] = {
     "compare_structures": "compare_structures",
     "validate_caption": "validate_figure_caption",
     "detect_anomaly": "detect_anomaly",
+    "extract_reaction": "extract_reaction",
+    "analyze_microscopy": "analyze_microscopy",
+    "identify_molecule": "molecular_structure",
 }
 
 
@@ -88,6 +91,8 @@ class ChemVisionAgent:
             self._planner = AgentPlanner(
                 api_key=self.config.anthropic_api_key,
                 planning_model=self.config.planning_model,
+                use_extended_thinking=self.config.use_extended_thinking,
+                thinking_budget_tokens=self.config.thinking_budget_tokens,
             )
         return self._planner
 
@@ -141,6 +146,19 @@ class ChemVisionAgent:
 
             # Accumulate assistant message into history
             messages.append(planner.assistant_message(response))
+
+            # Extended thinking blocks (if enabled)
+            thinking_text = planner.extract_thinking(response)
+            if thinking_text:
+                step_index += 1
+                thinking_step = AgentStep(
+                    step_index=step_index,
+                    step_type=StepType.THOUGHT,
+                    content=f"[Extended Thinking]\n{thinking_text}",
+                )
+                trace.append(thinking_step)
+                if self.config.verbose:
+                    print(f"[THINKING] {thinking_text[:200]}")
 
             thought_text = planner.extract_text(response)
             if thought_text:
@@ -237,6 +255,146 @@ class ChemVisionAgent:
             tool_logs=tool_logs,
             num_steps=step_index,
             confidence_threshold=self.config.confidence_threshold,
+            trace_steps=[s.model_dump(mode="json") for s in trace.steps],
+        )
+
+    def run_stream(
+        self,
+        question: str,
+        image_paths: list[str],
+    ) -> Generator[Union[AgentStep, "AnalysisReport"], None, None]:
+        """Execute the ReAct loop, yielding each :class:`AgentStep` live.
+
+        The final item yielded is the completed :class:`AnalysisReport`.
+        Callers can update a UI incrementally while the agent is running.
+
+        Example
+        -------
+        >>> for event in agent.run_stream(question, image_paths):
+        ...     if isinstance(event, AnalysisReport):
+        ...         report = event
+        ...     else:
+        ...         print(event.step_type, event.content[:80])
+        """
+        planner = self._get_planner()
+        vision_model = self._get_vision_model()
+
+        images: list[Image.Image] = [
+            Image.open(p).convert("RGB") for p in image_paths
+        ]
+
+        trace = AgentTrace(query=question, image_paths=list(image_paths))
+        tool_logs: list[ToolCallLog] = []
+        messages = planner.build_initial_message(question, image_paths)
+
+        step_index = 0
+        final_answer: str = ""
+        available_skills = (
+            self.config.skill_names if self.config.skill_names else list(_PLANNER_TO_REGISTRY.keys())
+        )
+
+        for _iteration in range(self.config.max_steps):
+            response = planner.plan(messages, available_skill_names=available_skills)
+            messages.append(planner.assistant_message(response))
+
+            # Yield extended thinking block as its own step (if present)
+            thinking_text = planner.extract_thinking(response)
+            if thinking_text:
+                step_index += 1
+                thinking_step = AgentStep(
+                    step_index=step_index,
+                    step_type=StepType.THOUGHT,
+                    content=f"[Extended Thinking]\n{thinking_text}",
+                )
+                trace.append(thinking_step)
+                yield thinking_step
+
+            thought_text = planner.extract_text(response)
+            if thought_text:
+                step_index += 1
+                thought_step = AgentStep(
+                    step_index=step_index,
+                    step_type=StepType.THOUGHT,
+                    content=thought_text,
+                )
+                trace.append(thought_step)
+                yield thought_step
+
+            tool_calls = planner.extract_tool_calls(response)
+
+            if not tool_calls:
+                if not final_answer:
+                    final_answer = thought_text or "Unable to determine an answer."
+                break
+
+            all_done = False
+            tool_result_messages: list[dict[str, Any]] = []
+
+            for call in tool_calls:
+                tool_name: str = call["name"]
+                tool_input: dict[str, Any] = call.get("input") or {}
+                tool_id: str = call["id"]
+
+                step_index += 1
+                action_step = AgentStep(
+                    step_index=step_index,
+                    step_type=StepType.ACTION,
+                    content=json.dumps({"tool": tool_name, "input": tool_input}),
+                    skill_name=tool_name,
+                )
+                trace.append(action_step)
+                yield action_step
+
+                if tool_name == "final_answer":
+                    final_answer = tool_input.get("answer", "")
+                    all_done = True
+                    tool_result_messages.extend(
+                        planner.build_tool_result_message(tool_id, "Answer recorded.")
+                    )
+                    break
+
+                observation, log = self._execute_skill(
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    images=images,
+                    image_paths=image_paths,
+                    vision_model=vision_model,
+                )
+                tool_logs.append(log)
+
+                step_index += 1
+                obs_step = AgentStep(
+                    step_index=step_index,
+                    step_type=StepType.OBSERVATION,
+                    content=observation,
+                    skill_name=tool_name,
+                )
+                trace.append(obs_step)
+                yield obs_step
+
+                tool_result_messages.extend(
+                    planner.build_tool_result_message(tool_id, observation)
+                )
+
+            messages.extend(tool_result_messages)
+
+            if all_done:
+                break
+
+            if planner.is_final(response) and not tool_calls:
+                break
+
+        trace.final_answer = final_answer
+        trace.finished_at = datetime.utcnow()
+
+        yield AnalysisReport.build(
+            question=question,
+            image_paths=list(image_paths),
+            final_answer=final_answer,
+            tool_logs=tool_logs,
+            num_steps=step_index,
+            confidence_threshold=self.config.confidence_threshold,
+            trace_steps=[s.model_dump(mode="json") for s in trace.steps],
         )
 
     # ------------------------------------------------------------------

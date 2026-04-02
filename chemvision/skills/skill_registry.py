@@ -6,7 +6,7 @@ The class shares its backing store with the module-level ``_REGISTRY`` dict in
 (:class:`SkillRegistry`) stay in sync.
 
 A singleton :data:`DEFAULT_REGISTRY` is created at module import time with all
-five built-in skills pre-registered.
+seven built-in skills pre-registered.
 """
 
 from __future__ import annotations
@@ -99,14 +99,18 @@ class SkillRegistry:
 
 
 # ---------------------------------------------------------------------------
-# Auto-register the five built-in skills
+# Auto-register the seven built-in skills
 # ---------------------------------------------------------------------------
 # Imported here (not at package level) to avoid circular-import issues.
 
 from chemvision.skills.analyze_structure import AnalyzeStructureSkill  # noqa: E402
 from chemvision.skills.compare_structures import CompareStructuresSkill  # noqa: E402
 from chemvision.skills.detect_anomaly import DetectAnomalySkill  # noqa: E402
+from chemvision.skills.extract_reaction import ExtractReactionSkill  # noqa: E402
 from chemvision.skills.extract_spectrum import ExtractSpectrumSkill  # noqa: E402
+from chemvision.skills.microscopy import MicroscopySkill  # noqa: E402
+from chemvision.skills.molecular import MolecularStructureSkill  # noqa: E402
+from chemvision.skills.property_prediction import PropertyPredictionSkill  # noqa: E402
 from chemvision.skills.validate_caption import ValidateCaptionSkill  # noqa: E402
 
 DEFAULT_REGISTRY: SkillRegistry = SkillRegistry()
@@ -116,5 +120,9 @@ for _skill in [
     CompareStructuresSkill(),
     ValidateCaptionSkill(),
     DetectAnomalySkill(),
+    ExtractReactionSkill(),
+    MicroscopySkill(),
+    MolecularStructureSkill(),
+    PropertyPredictionSkill(),
 ]:
     DEFAULT_REGISTRY.register(_skill)

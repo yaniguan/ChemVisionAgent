@@ -40,3 +40,14 @@ class AgentConfig(BaseModel):
         description="Skills available to the agent; empty = all registered.",
     )
     verbose: bool = Field(False, description="Stream Thought/Action/Observation to stdout.")
+
+    # Extended thinking (claude-sonnet-4-6 / claude-opus-4-6 only)
+    use_extended_thinking: bool = Field(
+        False,
+        description="Enable extended thinking for deeper multi-step reasoning.",
+    )
+    thinking_budget_tokens: int = Field(
+        8000,
+        gt=0,
+        description="Token budget for extended thinking; max_tokens is auto-raised if needed.",
+    )

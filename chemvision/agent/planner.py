@@ -132,6 +132,68 @@ _SKILL_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "identify_molecule",
+        "description": (
+            "Extract the SMILES string, IUPAC name, molecular formula, molecular weight, "
+            "functional groups (with counts), stereocenters (R/S, E/Z), and ring systems "
+            "from a 2-D skeletal formula, ball-and-stick model, or hand-drawn molecular diagram."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "image_index": {
+                    "type": "integer",
+                    "description": "Zero-based index into the images list (default 0).",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "extract_reaction",
+        "description": (
+            "Extract reaction type, all molecules (reactants, reagents, catalysts, products), "
+            "and experimental conditions (temperature, solvent, time, yield, atmosphere) "
+            "from a chemistry literature figure such as a reaction scheme or conditions table."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "image_index": {
+                    "type": "integer",
+                    "description": "Zero-based index into the images list (default 0).",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "analyze_microscopy",
+        "description": (
+            "Analyse morphology, particle size distribution, and scale bar in a microscopy image "
+            "(SEM, TEM, STEM, AFM, or optical). Returns dominant particle shape, surface texture, "
+            "aggregation state, per-particle measurements (diameter, aspect ratio), aggregate "
+            "size statistics (mean, std, min, max, distribution type), and calibrated scale-bar info."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "image_index": {
+                    "type": "integer",
+                    "description": "Zero-based index into the images list (default 0).",
+                },
+                "imaging_context": {
+                    "type": "string",
+                    "description": (
+                        "Brief description of the sample and instrument, e.g. "
+                        "'SEM image of ZnO nanoparticles' or 'TEM of Au nanorods in solution'."
+                    ),
+                },
+            },
+            "required": [],
+        },
+    },
+    {
         "name": "final_answer",
         "description": (
             "Emit the final synthesised answer when sufficient information has been gathered. "
@@ -153,12 +215,15 @@ _SKILL_TOOLS: list[dict[str, Any]] = [
 _SYSTEM_PROMPT = """\
 You are ChemVision, an expert AI agent for scientific image analysis.
 
-You have access to five vision skills:
-  • analyze_structure   — crystallographic analysis, lattice params, defects
-  • extract_spectrum    — peak extraction from XRD / Raman / XPS spectra
-  • compare_structures  — quantitative comparison of multiple structure images
-  • validate_caption    — figure/caption consistency check
-  • detect_anomaly      — anomaly and defect detection with severity ranking
+You have access to seven vision skills:
+  • analyze_structure    — crystallographic analysis, lattice params, defects
+  • extract_spectrum     — peak extraction from XRD / Raman / XPS spectra
+  • compare_structures   — quantitative comparison of multiple structure images
+  • validate_caption     — figure/caption consistency check
+  • detect_anomaly       — anomaly and defect detection with severity ranking
+  • extract_reaction     — reaction type, molecules (SMILES), and conditions from chemistry figures
+  • analyze_microscopy   — morphology, particle size distribution, and scale bar (SEM/TEM/AFM/OM)
+  • identify_molecule    — SMILES, IUPAC name, functional groups, stereocenters, ring systems from structure diagrams
 
 Strategy
 --------
@@ -191,12 +256,16 @@ class AgentPlanner:
     def __init__(
         self,
         api_key: str | None = None,
-        planning_model: str = "claude-sonnet-4-20250514",
+        planning_model: str = "claude-sonnet-4-6",
         max_tokens: int = 2048,
+        use_extended_thinking: bool = False,
+        thinking_budget_tokens: int = 8000,
     ) -> None:
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         self._planning_model = planning_model
         self._max_tokens = max_tokens
+        self._use_extended_thinking = use_extended_thinking
+        self._thinking_budget_tokens = thinking_budget_tokens
         self._client: Any = None
 
     # ------------------------------------------------------------------
@@ -296,13 +365,22 @@ class AgentPlanner:
             allowed = set(available_skill_names) | {"final_answer"}
             tools = [t for t in _SKILL_TOOLS if t["name"] in allowed]
 
-        return client.messages.create(
+        kwargs: dict[str, Any] = dict(
             model=self._planning_model,
             max_tokens=self._max_tokens,
             system=_SYSTEM_PROMPT,
             tools=tools,
             messages=messages,
         )
+
+        if self._use_extended_thinking:
+            budget = self._thinking_budget_tokens
+            # max_tokens must strictly exceed the thinking budget
+            if kwargs["max_tokens"] <= budget:
+                kwargs["max_tokens"] = budget + 2048
+            kwargs["thinking"] = {"type": "enabled", "budget_tokens": budget}
+
+        return client.messages.create(**kwargs)
 
     # ------------------------------------------------------------------
     # Response parsing
@@ -324,11 +402,22 @@ class AgentPlanner:
 
     @staticmethod
     def extract_text(response: Any) -> str:
-        """Extract concatenated text blocks from a Claude response."""
+        """Extract concatenated text blocks from a Claude response (excludes thinking)."""
         parts = []
         for block in response.content:
+            if getattr(block, "type", None) == "thinking":
+                continue
             if hasattr(block, "text"):
                 parts.append(block.text)
+        return "\n".join(parts)
+
+    @staticmethod
+    def extract_thinking(response: Any) -> str:
+        """Extract extended thinking content if present (empty string otherwise)."""
+        parts = []
+        for block in response.content:
+            if getattr(block, "type", None) == "thinking" and hasattr(block, "thinking"):
+                parts.append(block.thinking)
         return "\n".join(parts)
 
     @staticmethod

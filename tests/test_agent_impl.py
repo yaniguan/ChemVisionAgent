@@ -497,7 +497,7 @@ class TestAPIEndpoints:
 
         from chemvision.api import _STATE, app
 
-        _STATE["latest_audit"] = None
+        _STATE.latest_audit = None
         with TestClient(app) as client:
             resp = client.get("/audit")
             assert resp.status_code == 200
@@ -509,7 +509,7 @@ class TestAPIEndpoints:
 
         from chemvision.api import _STATE, app
 
-        _STATE["agent"] = MagicMock()
+        _STATE.agent = MagicMock()
         with TestClient(app) as client:
             resp = client.post(
                 "/analyze",
@@ -535,8 +535,8 @@ class TestAPIEndpoints:
 
         with TestClient(app) as client:
             # Override after lifespan has initialised (lifespan creates its own agent)
-            _STATE["agent"] = mock_agent
-            _STATE["latest_audit"] = None
+            _STATE.agent = mock_agent
+            _STATE.latest_audit = None
 
             resp = client.post(
                 "/analyze",
@@ -546,4 +546,4 @@ class TestAPIEndpoints:
             data = resp.json()
             assert data["final_answer"] == "It is anatase."
             assert data["low_confidence_flag"] is False
-            assert _STATE["latest_audit"] is not None
+            assert _STATE.latest_audit is not None

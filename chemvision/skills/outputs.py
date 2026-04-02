@@ -163,6 +163,50 @@ class Anomaly(SkillResult):
     confidence: float | None = Field(None, ge=0.0, le=1.0)
 
 
+# ---------------------------------------------------------------------------
+# molecular_structure
+# ---------------------------------------------------------------------------
+
+
+class FunctionalGroup(SkillResult):
+    """A single functional group identified in a molecular structure."""
+
+    skill_name: str = "molecular_structure"
+    raw_output: str = ""
+
+    name: str = Field("", description="E.g. 'hydroxyl', 'carboxyl', 'amine'.")
+    smarts: str | None = Field(None, description="SMARTS pattern if determinable.")
+    count: int = Field(1, ge=1, description="Number of occurrences in the molecule.")
+
+
+class StereocenterInfo(SkillResult):
+    """A single stereocenter or geometric isomerism element."""
+
+    skill_name: str = "molecular_structure"
+    raw_output: str = ""
+
+    atom_or_bond: str = Field("", description="Atom label or bond description, e.g. 'C3', 'C2=C3'.")
+    descriptor: str = Field("", description="R/S for chiral centres; E/Z for double bonds.")
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
+
+
+class MolecularStructureData(SkillResult):
+    """Full output of the ``molecular_structure`` skill."""
+
+    smiles: str | None = Field(None, description="SMILES string of the molecule.")
+    iupac_name: str | None = Field(None, description="IUPAC name if determinable.")
+    common_name: str | None = Field(None, description="Common or trade name if shown.")
+    molecular_formula: str | None = Field(None, description="E.g. 'C6H12O6'.")
+    molecular_weight: float | None = Field(None, description="Estimated MW in g/mol.")
+    functional_groups: list[FunctionalGroup] = Field(default_factory=list)
+    stereocenters: list[StereocenterInfo] = Field(default_factory=list)
+    ring_systems: list[str] = Field(
+        default_factory=list,
+        description="E.g. ['benzene', 'cyclohexane', 'pyridine'].",
+    )
+    num_rings: int | None = Field(None, ge=0)
+
+
 class AnomalyReport(SkillResult):
     """Full output of the ``detect_anomaly`` skill."""
 
@@ -171,3 +215,130 @@ class AnomalyReport(SkillResult):
         "none", description="Overall severity across all detected anomalies."
     )
     recommendations: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# extract_reaction
+# ---------------------------------------------------------------------------
+
+
+class Molecule(SkillResult):
+    """A molecule identified in a reaction scheme."""
+
+    skill_name: str = "extract_reaction"
+    raw_output: str = ""
+
+    name: str = Field("", description="IUPAC name or common name.")
+    smiles: str | None = Field(None, description="SMILES string if determinable.")
+    role: Literal["reactant", "product", "reagent", "catalyst", "solvent", "unknown"] = "unknown"
+
+
+class ReactionConditions(SkillResult):
+    """Experimental conditions extracted from a reaction scheme or table."""
+
+    skill_name: str = "extract_reaction"
+    raw_output: str = ""
+
+    temperature: str | None = Field(None, description="E.g. '80 °C', 'rt', '-78 °C'.")
+    pressure: str | None = Field(None, description="E.g. '1 atm', '5 bar'.")
+    solvent: str | None = Field(None, description="E.g. 'THF', 'MeOH/H2O'.")
+    time: str | None = Field(None, description="E.g. '12 h', '30 min'.")
+    atmosphere: str | None = Field(None, description="E.g. 'N2', 'Ar', 'air'.")
+    yield_percent: float | None = Field(None, description="Reported yield 0–100.")
+
+
+class ReactionData(SkillResult):
+    """Full output of the ``extract_reaction`` skill."""
+
+    reaction_type: str = Field(
+        "", description="E.g. 'Suzuki coupling', 'aldol condensation', 'oxidation'."
+    )
+    molecules: list[Molecule] = Field(default_factory=list)
+    conditions: ReactionConditions | None = None
+    arrow_type: str = Field(
+        "", description="E.g. 'single-step', 'retrosynthetic', 'equilibrium'."
+    )
+
+
+# ---------------------------------------------------------------------------
+# analyze_microscopy
+# ---------------------------------------------------------------------------
+
+
+class ParticleMeasurement(SkillResult):
+    """Dimensions measured on one individual particle."""
+
+    skill_name: str = "analyze_microscopy"
+    raw_output: str = ""
+
+    diameter: float | None = Field(None, description="Diameter or longest axis in calibrated units.")
+    aspect_ratio: float | None = Field(None, ge=0.0, description="Length / width (1.0 = sphere).")
+    shape: str = Field("unknown", description="E.g. 'spherical', 'rod', 'platelet'.")
+    location_x: float = Field(0.0, ge=0.0, le=1.0, description="Normalised x centre [0, 1].")
+    location_y: float = Field(0.0, ge=0.0, le=1.0, description="Normalised y centre [0, 1].")
+
+
+class SizeStatistics(SkillResult):
+    """Aggregate particle-size statistics across all measured particles."""
+
+    skill_name: str = "analyze_microscopy"
+    raw_output: str = ""
+
+    mean_diameter: float | None = Field(None, description="Mean diameter in *unit*.")
+    std_diameter: float | None = Field(None, ge=0.0, description="Standard deviation of diameter.")
+    min_diameter: float | None = Field(None, description="Smallest measured diameter.")
+    max_diameter: float | None = Field(None, description="Largest measured diameter.")
+    unit: str = Field("nm", description="Unit for all diameter values.")
+    distribution: Literal["monodisperse", "polydisperse", "bimodal", "unknown"] = "unknown"
+    particle_count: int | None = Field(None, ge=0, description="Number of particles measured.")
+
+
+class ScaleBar(SkillResult):
+    """Scale bar metadata read directly from the image."""
+
+    skill_name: str = "analyze_microscopy"
+    raw_output: str = ""
+
+    value: float | None = Field(None, description="Numeric value shown on the scale bar.")
+    unit: str = Field("nm", description="Unit of the scale bar value.")
+    pixel_length: int | None = Field(None, ge=0, description="Pixel length of the scale bar segment.")
+    nm_per_pixel: float | None = Field(None, ge=0.0, description="Calibrated nm / pixel ratio.")
+
+
+class MorphologyInfo(SkillResult):
+    """Qualitative morphology description of the imaged material."""
+
+    skill_name: str = "analyze_microscopy"
+    raw_output: str = ""
+
+    shape: str = Field(
+        "unknown",
+        description="Dominant particle shape: spherical, rod, platelet, dendritic, porous, "
+        "irregular, core-shell, or other.",
+    )
+    surface_texture: str = Field(
+        "unknown",
+        description="Surface finish: smooth, rough, faceted, porous, or other.",
+    )
+    aggregation: str = Field(
+        "unknown",
+        description="Dispersion state: dispersed, agglomerated, sintered, or clustered.",
+    )
+    description: str = Field("", description="Free-text morphology summary.")
+
+
+class MicroscopyAnalysis(SkillResult):
+    """Full output of the ``analyze_microscopy`` skill."""
+
+    morphology: MorphologyInfo | None = None
+    particles: list[ParticleMeasurement] = Field(
+        default_factory=list,
+        description="Per-particle measurements (up to ~20 representative particles).",
+    )
+    size_statistics: SizeStatistics | None = None
+    scale_bar: ScaleBar | None = None
+    imaging_modality: str = Field(
+        "unknown",
+        description="Detected imaging modality: SEM, TEM, STEM, AFM, OM, or other.",
+    )
+    magnification: str | None = Field(None, description="Magnification label if visible, e.g. '50000x'.")

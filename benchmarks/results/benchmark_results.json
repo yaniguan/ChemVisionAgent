@@ -1,0 +1,92 @@
+{
+  "csca_retrieval": {
+    "random": {
+      "R@1": 0.0,
+      "R@5": 0.25,
+      "R@10": 0.35
+    },
+    "pca": {
+      "R@1": 0.0,
+      "R@5": 0.3,
+      "R@10": 0.55
+    },
+    "autoencoder": {
+      "R@1": 0.0,
+      "R@5": 0.2,
+      "R@10": 0.45
+    },
+    "csca_ours": {
+      "R@1": 0.7,
+      "R@5": 1.0,
+      "R@10": 1.0
+    },
+    "csca_epochs": 77,
+    "csca_loss": 0.16142939403653145
+  },
+  "flow_generation": {
+    "random": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "MMD": 1.9397064447402954,
+      "NN_similarity": 0.09903738647699356
+    },
+    "gaussian": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "MMD": 0.7369436621665955,
+      "NN_similarity": 0.45573824644088745
+    },
+    "vae": {
+      "validity": 1.0,
+      "uniqueness": 0.65,
+      "novelty": 1.0,
+      "MMD": 1.193455457687378,
+      "NN_similarity": 0.594171404838562
+    },
+    "flow_ours": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "MMD": 0.974338710308075,
+      "NN_similarity": 0.5707765817642212
+    },
+    "fm_epochs": 100,
+    "fm_loss": 1.1524375200271606
+  },
+  "pareto_mcts": {
+    "random": {
+      "front_size": 8,
+      "hypervolume": 0.0
+    },
+    "greedy": {
+      "front_size": 7,
+      "hypervolume": 0.0
+    },
+    "mcts_ours": {
+      "front_size": 21,
+      "hypervolume": 0.0,
+      "time_s": 1.524620459007565
+    }
+  },
+  "calibration": {
+    "uncalibrated": {
+      "ece": 0.31598445245406304,
+      "brier": 0.3565997814571643
+    },
+    "temperature": {
+      "ece": 0.08511594600100432,
+      "brier": 0.2552888530387888,
+      "T": 4.899999999999999
+    },
+    "isotonic_ours": {
+      "ece": 0.10453986498814087,
+      "brier": 0.2598273684437932
+    },
+    "platt_ours": {
+      "ece": 0.03170352788746966,
+      "brier": 0.25068693447964685
+    }
+  }
+}

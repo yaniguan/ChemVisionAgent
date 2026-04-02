@@ -51,6 +51,12 @@ class AnalysisReport(BaseModel):
     num_steps: int = Field(0, description="Total number of ReAct steps taken.")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Full reasoning trace (thought + action + observation steps)
+    trace_steps: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Serialised AgentStep records for full trace display including THOUGHT steps.",
+    )
+
     # Structured data parsed from final_answer when it contains JSON
     structured_data: dict[str, Any] = Field(
         default_factory=dict,
@@ -74,6 +80,7 @@ class AnalysisReport(BaseModel):
         tool_logs: list[ToolCallLog],
         num_steps: int = 0,
         confidence_threshold: float = 0.75,
+        trace_steps: list[dict[str, Any]] | None = None,
     ) -> "AnalysisReport":
         """Construct an :class:`AnalysisReport` with confidence propagation.
 
@@ -127,6 +134,7 @@ class AnalysisReport(BaseModel):
             min_intermediate_confidence=min_conf,
             num_steps=num_steps,
             structured_data=structured,
+            trace_steps=trace_steps or [],
         )
 
     # ---------------------------------------------------------------------------

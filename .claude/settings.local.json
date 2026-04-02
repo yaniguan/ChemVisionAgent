@@ -7,7 +7,21 @@
       "Skill(claude-api)",
       "Bash(python -m pytest tests/ -v 2>&1)",
       "Bash(python -m pytest tests/test_agent.py tests/test_agent_impl.py -x -q 2>&1 | head -80)",
-      "Bash(tree -L 3 -I '__pycache__|*.pyc|.venv' /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent 2>/dev/null || find /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent -type f -name \"*.py\" | sort)"
+      "Bash(tree -L 3 -I '__pycache__|*.pyc|.venv' /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent 2>/dev/null || find /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent -type f -name \"*.py\" | sort)",
+      "Bash(find /Users/yaniguan/Documents/04_vibecode/ChemVisionAgent/chemvision/skills -type f -name *.py)",
+      "Bash(.venv/bin/python -c \"import chemvision; print\\(chemvision.__file__\\)\")",
+      "Bash(ls -la .venv/bin/python*)",
+      "Bash(/opt/homebrew/Cellar/python@3.11/3.11.14/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python -c \"import sys; sys.path.insert\\(0, '/Users/yaniguan/Documents/04_vibecode/ChemVisionAgent'\\); import chemvision; print\\('ok'\\)\" 2>&1)",
+      "Bash(/opt/homebrew/Cellar/python@3.11/3.11.14/Frameworks/Python.framework/Versions/3.11/Resources/Python.app/Contents/MacOS/Python -c \"import chemvision\" 2>&1)",
+      "Bash(curl -v --max-time 10 https://api.anthropic.com/v1/models)",
+      "Bash(echo \"HTTP_PROXY=$HTTP_PROXY\")",
+      "Bash(echo \"HTTPS_PROXY=$HTTPS_PROXY\")",
+      "Bash(echo \"http_proxy=$http_proxy\")",
+      "Bash(echo \"https_proxy=$https_proxy\")",
+      "Bash(source ~/.zshrc)",
+      "Bash(uv run python -c \":*)",
+      "Bash(git:*)",
+      "Bash(python:*)"
     ]
   }
 }
