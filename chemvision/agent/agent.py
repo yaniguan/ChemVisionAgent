@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Generator, Union
 
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 from chemvision.agent.adapter import AnthropicVisionFallback
 from chemvision.agent.config import AgentConfig
@@ -158,7 +161,7 @@ class ChemVisionAgent:
                 )
                 trace.append(thinking_step)
                 if self.config.verbose:
-                    print(f"[THINKING] {thinking_text[:200]}")
+                    logger.info("THINKING: %s", thinking_text[:200])
 
             thought_text = planner.extract_text(response)
             if thought_text:
@@ -170,7 +173,7 @@ class ChemVisionAgent:
                 )
                 trace.append(thought_step)
                 if self.config.verbose:
-                    print(f"[THOUGHT] {thought_text}")
+                    logger.info("THOUGHT: %s", thought_text)
 
             # --- Action: parse tool calls --------------------------------
             tool_calls = planner.extract_tool_calls(response)
@@ -198,7 +201,7 @@ class ChemVisionAgent:
                 )
                 trace.append(action_step)
                 if self.config.verbose:
-                    print(f"[ACTION] {tool_name}({tool_input})")
+                    logger.info("ACTION: %s(%s)", tool_name, tool_input)
 
                 # Handle final_answer pseudo-tool
                 if tool_name == "final_answer":
@@ -229,7 +232,7 @@ class ChemVisionAgent:
                 )
                 trace.append(obs_step)
                 if self.config.verbose:
-                    print(f"[OBSERVATION] {observation[:200]}")
+                    logger.info("OBSERVATION: %s", observation[:200])
 
                 tool_result_messages.extend(
                     planner.build_tool_result_message(tool_id, observation)
@@ -246,7 +249,7 @@ class ChemVisionAgent:
                 break
 
         trace.final_answer = final_answer
-        trace.finished_at = datetime.utcnow()
+        trace.finished_at = datetime.now(timezone.utc)
 
         return AnalysisReport.build(
             question=question,
@@ -385,7 +388,7 @@ class ChemVisionAgent:
                 break
 
         trace.final_answer = final_answer
-        trace.finished_at = datetime.utcnow()
+        trace.finished_at = datetime.now(timezone.utc)
 
         yield AnalysisReport.build(
             question=question,
@@ -438,7 +441,8 @@ class ChemVisionAgent:
 
         try:
             result: SkillResult = skill(primary_image, vision_model, **kwargs)
-        except Exception as exc:  # noqa: BLE001
+        except (RuntimeError, ValueError, TypeError, OSError) as exc:
+            logger.error("Skill %r execution failed: %s", tool_name, exc)
             observation = f"Skill execution error: {exc}"
             log = ToolCallLog(
                 skill_name=tool_name,

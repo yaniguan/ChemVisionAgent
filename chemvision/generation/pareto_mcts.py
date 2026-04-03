@@ -31,6 +31,7 @@ Example
 
 from __future__ import annotations
 
+import logging
 import math
 import random
 from dataclasses import dataclass, field
@@ -38,6 +39,8 @@ from typing import Callable
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, rdMolDescriptors
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +59,8 @@ class Objective:
         """Return a value where *higher is always better* for UCB."""
         try:
             raw = self.fn(smiles)
-        except Exception:
+        except (ValueError, KeyError, RuntimeError) as exc:
+            logger.warning("Objective %r evaluation failed for %r: %s", self.name, smiles, exc)
             return -1e9
         return raw if self.direction == "max" else -raw
 
@@ -122,8 +126,8 @@ def _mutate_smiles(smiles: str, rng: random.Random) -> list[str]:
                 s = Chem.MolToSmiles(em2)
                 if s and Chem.MolFromSmiles(s) is not None:
                     candidates.append(s)
-            except Exception:
-                pass
+            except ValueError:
+                pass  # invalid chemistry from atom substitution — expected
         if len(candidates) >= 8:
             break
 
@@ -139,8 +143,8 @@ def _mutate_smiles(smiles: str, rng: random.Random) -> list[str]:
                 )
                 if joined:
                     candidates.append(joined)
-            except Exception:
-                pass
+            except ValueError:
+                pass  # invalid fragment combination — expected
             break
 
     # Canonicalise and deduplicate

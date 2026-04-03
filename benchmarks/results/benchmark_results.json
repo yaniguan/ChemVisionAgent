@@ -2,58 +2,58 @@
   "csca_retrieval": {
     "random": {
       "R@1": 0.0,
-      "R@5": 0.25,
-      "R@10": 0.35
+      "R@5": 0.1,
+      "R@10": 0.3
     },
     "pca": {
       "R@1": 0.0,
-      "R@5": 0.3,
-      "R@10": 0.55
+      "R@5": 0.2,
+      "R@10": 0.5
     },
     "autoencoder": {
       "R@1": 0.0,
-      "R@5": 0.2,
+      "R@5": 0.0,
       "R@10": 0.45
     },
     "csca_ours": {
-      "R@1": 0.7,
+      "R@1": 0.75,
       "R@5": 1.0,
       "R@10": 1.0
     },
-    "csca_epochs": 77,
-    "csca_loss": 0.16142939403653145
+    "csca_epochs": 120,
+    "csca_loss": 0.058290353044867516
   },
   "flow_generation": {
     "random": {
       "validity": 1.0,
       "uniqueness": 1.0,
       "novelty": 1.0,
-      "MMD": 1.9397064447402954,
-      "NN_similarity": 0.09903738647699356
+      "MMD": 1.9652847051620483,
+      "NN_similarity": 0.09968231618404388
     },
     "gaussian": {
       "validity": 1.0,
       "uniqueness": 1.0,
       "novelty": 1.0,
-      "MMD": 0.7369436621665955,
-      "NN_similarity": 0.45573824644088745
+      "MMD": 0.7511449456214905,
+      "NN_similarity": 0.45891958475112915
     },
     "vae": {
       "validity": 1.0,
-      "uniqueness": 0.65,
+      "uniqueness": 0.6,
       "novelty": 1.0,
-      "MMD": 1.193455457687378,
-      "NN_similarity": 0.594171404838562
+      "MMD": 1.144484043121338,
+      "NN_similarity": 0.6199053525924683
     },
     "flow_ours": {
       "validity": 1.0,
       "uniqueness": 1.0,
       "novelty": 1.0,
-      "MMD": 0.974338710308075,
-      "NN_similarity": 0.5707765817642212
+      "MMD": 0.7614747285842896,
+      "NN_similarity": 0.5693951845169067
     },
     "fm_epochs": 100,
-    "fm_loss": 1.1524375200271606
+    "fm_loss": 1.154790496826172
   },
   "pareto_mcts": {
     "random": {
@@ -67,7 +67,7 @@
     "mcts_ours": {
       "front_size": 21,
       "hypervolume": 0.0,
-      "time_s": 1.524620459007565
+      "time_s": 1.5257357499795035
     }
   },
   "calibration": {

@@ -89,9 +89,7 @@ class DetectAnomalySkill(BaseSkill):
             if not isinstance(a, dict):
                 continue
             raw_sev = to_str(a.get("severity"), "low").lower()
-            sev: Literal["low", "medium", "high"] = (
-                raw_sev if raw_sev in _ANOMALY_SEVERITIES else "low"  # type: ignore[assignment]
-            )
+            sev = raw_sev if raw_sev in _ANOMALY_SEVERITIES else "low"
             anomalies.append(
                 Anomaly(
                     location_x=min(1.0, max(0.0, float(a.get("location_x") or 0.0))),
@@ -105,11 +103,7 @@ class DetectAnomalySkill(BaseSkill):
             )
 
         raw_report_sev = to_str(data.get("severity"), "none").lower()
-        report_sev: Literal["none", "low", "medium", "high"] = (
-            raw_report_sev  # type: ignore[assignment]
-            if raw_report_sev in _REPORT_SEVERITIES
-            else "none"
-        )
+        report_sev = raw_report_sev if raw_report_sev in _REPORT_SEVERITIES else "none"
 
         recommendations = [
             to_str(r) for r in to_list(data.get("recommendations")) if r is not None

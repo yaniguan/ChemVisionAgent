@@ -193,7 +193,7 @@ class TestCSCAModel:
 class TestFlowMatcher:
 
     def test_vector_field_net_shapes(self) -> None:
-        from chemvision.generation.flow_matcher import _VectorFieldNet, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import _VectorFieldNet, FlowMatcherConfig
         config = FlowMatcherConfig(fp_dim=64, cond_dim=4, hidden_dim=32, n_layers=2)
         net = _VectorFieldNet(config)
         x = torch.randn(8, 64)
@@ -205,7 +205,7 @@ class TestFlowMatcher:
     def test_train_converges(self, training_data) -> None:
         """CRITICAL: verify flow matcher loss decreases during training."""
         fps, props, _ = training_data
-        from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
         config = FlowMatcherConfig(
             fp_dim=fps.shape[1], cond_dim=props.shape[1],
             hidden_dim=128, n_layers=2, learning_rate=5e-4, seed=42,
@@ -220,7 +220,7 @@ class TestFlowMatcher:
     def test_sample_produces_fingerprints(self, training_data) -> None:
         """Generate molecules and verify output shape and validity."""
         fps, props, _ = training_data
-        from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
         config = FlowMatcherConfig(
             fp_dim=fps.shape[1], cond_dim=props.shape[1],
             hidden_dim=64, n_layers=2, seed=42,
@@ -240,7 +240,7 @@ class TestFlowMatcher:
 
     def test_generated_fingerprints_have_nonzero_bits(self, training_data) -> None:
         fps, props, _ = training_data
-        from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
         config = FlowMatcherConfig(
             fp_dim=fps.shape[1], cond_dim=props.shape[1],
             hidden_dim=64, n_layers=2, seed=42,
@@ -256,7 +256,7 @@ class TestFlowMatcher:
 
     def test_reproducibility(self, training_data) -> None:
         fps, props, _ = training_data
-        from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
         config = FlowMatcherConfig(
             fp_dim=fps.shape[1], cond_dim=props.shape[1],
             hidden_dim=32, n_layers=1, seed=42,
@@ -300,7 +300,7 @@ class TestFullPipeline:
         assert csca_result.converged or csca_result.final_loss < csca_result.loss_history[0]
 
         # 3. Train Flow Matcher
-        from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+        from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
         flow_config = FlowMatcherConfig(
             fp_dim=fps.shape[1], cond_dim=props.shape[1],
             hidden_dim=64, n_layers=2, seed=42,

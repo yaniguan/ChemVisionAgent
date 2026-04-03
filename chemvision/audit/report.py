@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class AuditReport(BaseModel):
     """Full audit report aggregating scores across all probed skills."""
 
     model_name: str
-    run_at: datetime = Field(default_factory=datetime.utcnow)
+    run_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     skill_scores: list[SkillScore] = Field(default_factory=list)
     overall_accuracy: float = Field(0.0, ge=0.0, le=1.0)
     metadata: dict[str, object] = Field(default_factory=dict)

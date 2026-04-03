@@ -318,7 +318,7 @@ metrics_vae = generation_metrics(fps_train, gen_vae)
 print(f"  Conditional VAE:  {metrics_vae}")
 
 # --- Flow Matching (ours) ---
-from chemvision.generation.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
+from chemvision.generation._experimental.flow_matcher import ConditionalFlowMatcher, FlowMatcherConfig
 
 fm_config = FlowMatcherConfig(fp_dim=fps.shape[1], cond_dim=props.shape[1],
                               hidden_dim=256, n_layers=3, seed=42)
@@ -446,8 +446,8 @@ for _ in range(500):
         s = Chem.MolToSmiles(em)
         if s and Chem.MolFromSmiles(s):
             rand_smiles.add(s)
-    except Exception:
-        pass
+    except ValueError:
+        pass  # invalid chemistry from atom substitution — expected
 
 rand_candidates = []
 for s in list(rand_smiles)[:100]:

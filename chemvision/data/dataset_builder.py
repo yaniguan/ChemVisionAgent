@@ -11,6 +11,7 @@ Output: Parquet files with reproducible train/val/test splits.
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -18,6 +19,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -111,7 +114,11 @@ class MolecularDatasetBuilder:
             results = client.get_similar_compounds(query, threshold=70, max_results=n)
             smiles = [r.get("CanonicalSMILES", "") for r in results if r.get("CanonicalSMILES")]
             return self.add_from_smiles_list(smiles)
-        except Exception:
+        except ImportError:
+            logger.warning("PubChemClient not available, skipping PubChem fetch")
+            return 0
+        except (OSError, TimeoutError, ValueError) as exc:
+            logger.error("PubChem fetch failed: %s", exc)
             return 0
 
     def add_random_molecules(self, n: int = 500) -> int:
@@ -146,8 +153,8 @@ class MolecularDatasetBuilder:
                 smi = Chem.MolToSmiles(em)
                 if smi and Chem.MolFromSmiles(smi) is not None and smi not in generated:
                     generated.add(smi)
-            except Exception:
-                pass
+            except ValueError:
+                pass  # invalid chemistry from atom substitution — expected
 
         return self.add_from_smiles_list(list(generated))
 

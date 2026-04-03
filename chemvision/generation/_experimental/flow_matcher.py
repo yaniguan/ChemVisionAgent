@@ -1,31 +1,21 @@
-"""Conditional Flow Matching for molecular generation.
+"""EXPERIMENTAL: Flow Matcher for molecular fingerprint space.
 
-Novel contribution: learn a vector field that transports noise
-to molecular fingerprint distributions, conditioned on target properties.
+WARNING -- QUARANTINED -- This module generates fingerprint vectors that cannot be
+decoded back to valid molecules. It produces 0% validity in benchmarks.
+Retained for research reference only. Do NOT use in production pipelines.
 
-Theory (Lipman et al., ICLR 2023; Tong et al., NeurIPS 2023)
-------
-  Optimal Transport CFM defines a conditional probability path:
-    p_t(x | x_1) = N(x | t·x_1, (1-(1-σ)t)²·I)
-
-  The conditional vector field is:
-    u_t(x | x_1) = (x_1 - (1-σ)·x) / (1 - (1-σ)·t)
-
-  A neural network v_θ(x, t, c) learns to approximate u_t given:
-    - x: noisy sample at time t
-    - t: time step ∈ [0, 1]
-    - c: conditioning (target property vector)
-
-Sampling: integrate ODE dx/dt = v_θ(x, t, c) from t=0 to t=1.
-
-This is the molecular-space analogue of SemlaFlow (arxiv:2406.07266)
-but operates in Morgan fingerprint space (2048-dim) rather than
-3D coordinate space, making it trainable on CPU.
+To re-enter the benchmark pipeline, this needs:
+  1. A latent-space representation with a trained decoder
+  2. Validity-preserving decoding (e.g., SELFIES decoder on latent codes)
+  3. Demonstrated validity > 70% on ZINC250K
 """
 
 from __future__ import annotations
 
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -95,9 +85,9 @@ if _HAS_TORCH:
             return x + h  # residual
 
     class _VectorFieldNet(nn.Module):
-        """Neural network approximating the conditional vector field v_θ(x, t, c).
+        """Neural network approximating the conditional vector field v_theta(x, t, c).
 
-        Architecture: input projection → N residual blocks → output projection.
+        Architecture: input projection -> N residual blocks -> output projection.
         """
 
         def __init__(self, config: FlowMatcherConfig) -> None:
@@ -157,7 +147,7 @@ if _HAS_TORCH:
             patience: int = 20,
             verbose: bool = False,
         ) -> FlowMatcherTrainResult:
-            """Train the flow matcher on fingerprint ↔ property pairs.
+            """Train the flow matcher on fingerprint <-> property pairs.
 
             Parameters
             ----------
@@ -222,7 +212,7 @@ if _HAS_TORCH:
                 result.loss_history.append(avg_loss)
 
                 if verbose and epoch % 10 == 0:
-                    print(f"  Epoch {epoch:3d} | loss={avg_loss:.4f}")
+                    logger.info("Epoch %3d | loss=%.4f", epoch, avg_loss)
 
                 if avg_loss < best_loss - 1e-5:
                     best_loss = avg_loss
@@ -266,7 +256,7 @@ if _HAS_TORCH:
             x = torch.randn(Q, self.config.fp_dim)
             dt = 1.0 / n_steps
 
-            # Euler integration: dx/dt = v_θ(x, t, c)
+            # Euler integration: dx/dt = v_theta(x, t, c)
             for step in range(n_steps):
                 t = torch.full((Q, 1), step * dt)
                 v = self.net(x, t, c)

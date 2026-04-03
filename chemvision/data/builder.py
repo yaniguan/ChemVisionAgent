@@ -8,6 +8,8 @@ Flow
    on each configured DOI / arXiv identifier.
 3. If neither sub-pipeline is configured, fall back to the raw-image collect +
    annotate path (``collect_images`` / ``annotate``).
+
+.. note:: All logging uses the ``logging`` module, never bare ``print()``.
 4. Shuffle + split into train / val / test according to ``config`` ratios.
 5. ``save()`` serialises to HuggingFace ``DatasetDict`` format on disk.
 """
@@ -15,6 +17,9 @@ Flow
 from __future__ import annotations
 
 import random
+import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 
 from chemvision.data.schema import DatasetConfig, ImageRecord
@@ -134,8 +139,8 @@ class DatasetBuilder:
                         n_questions_per_difficulty=syn_cfg.n_questions_per_difficulty,
                     )
                     all_records.extend(records)
-                except Exception as exc:
-                    print(f"[DatasetBuilder] Skipping synthetic file {file_path}: {exc}")
+                except (OSError, IOError, ValueError) as exc:
+                    logger.warning("Skipping synthetic file %s: %s", file_path, exc)
 
         # ---- literature scraper pipeline ---------------------------------
         if self.config.scraper is not None:
@@ -152,8 +157,8 @@ class DatasetBuilder:
             try:
                 records = scraper.scrape(scr_cfg.identifiers)
                 all_records.extend(records)
-            except Exception as exc:
-                print(f"[DatasetBuilder] Scraper pipeline failed: {exc}")
+            except (OSError, IOError, ValueError) as exc:
+                logger.error("Scraper pipeline failed: %s", exc)
 
         # ---- fallback: raw image collect + annotate ----------------------
         if not all_records:
@@ -162,8 +167,8 @@ class DatasetBuilder:
                     all_records.append(self.annotate(image_path))
                 except NotImplementedError:
                     raise
-                except Exception as exc:
-                    print(f"[DatasetBuilder] Skipping {image_path}: {exc}")
+                except (OSError, IOError, ValueError) as exc:
+                    logger.warning("Skipping %s: %s", image_path, exc)
 
         return self._split(all_records)
 
@@ -204,10 +209,8 @@ class DatasetBuilder:
         save_path.mkdir(parents=True, exist_ok=True)
         ds_dict.save_to_disk(str(save_path))
         total = sum(len(v) for v in splits.values())
-        print(
-            f"[DatasetBuilder] Saved {total} records to {save_path}\n"
-            + "\n".join(f"  {k}: {len(v)}" for k, v in splits.items() if v)
-        )
+        split_summary = ", ".join(f"{k}={len(v)}" for k, v in splits.items() if v)
+        logger.info("Saved %d records to %s (%s)", total, save_path, split_summary)
 
     # ------------------------------------------------------------------
     # Internal helpers

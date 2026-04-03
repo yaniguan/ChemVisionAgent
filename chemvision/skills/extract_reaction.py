@@ -92,7 +92,7 @@ class ExtractReactionSkill(BaseSkill):
                     Molecule(
                         name=to_str(m.get("name"), ""),
                         smiles=to_str(m.get("smiles")) or None,
-                        role=role,  # type: ignore[arg-type]
+                        role=role,  # validated above
                         raw_output=raw,
                     )
                 )

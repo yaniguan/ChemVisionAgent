@@ -1,0 +1,54 @@
+{
+  "Random SELFIES": {
+    "validity": 1.0,
+    "uniqueness": 0.954,
+    "novelty": 1.0,
+    "int_div_1": 0.9822772648215058,
+    "fcd_proxy": 1.8956999984941425,
+    "mw_mean": 115.31489098532495,
+    "qed_mean": 0.2763618451112411
+  },
+  "Train Resample": {
+    "validity": 1.0,
+    "uniqueness": 0.416,
+    "novelty": 0.0,
+    "int_div_1": 0.893453904133635,
+    "fcd_proxy": 0.07867276321247317,
+    "mw_mean": 162.15346153846153,
+    "qed_mean": 0.5148844521856748
+  },
+  "SMILES Random Walk": {
+    "validity": 0.0,
+    "uniqueness": 0.0,
+    "novelty": 0.0,
+    "int_div_1": 0.0,
+    "fcd_proxy": 0.0,
+    "mw_mean": 0.0,
+    "qed_mean": 0.0
+  },
+  "SELFIES Gen (ours)": {
+    "validity": 1.0,
+    "uniqueness": 0.44,
+    "novelty": 0.6272727272727273,
+    "int_div_1": 0.9163396549222473,
+    "fcd_proxy": 0.5771672348753776,
+    "mw_mean": 168.19005,
+    "qed_mean": 0.506747084643904
+  },
+  "Flow Matcher (FP)": {
+    "validity": 0.0,
+    "uniqueness": 0.0,
+    "novelty": 0.0,
+    "int_div_1": 0.0,
+    "fcd_proxy": 0.0,
+    "mw_mean": 0.0,
+    "qed_mean": 0.0
+  },
+  "training": {
+    "epochs": 60,
+    "loss": 0.34141766279935837,
+    "vocab_size": 26,
+    "time_s": 36.083711665996816,
+    "dataset_size": 287
+  }
+}

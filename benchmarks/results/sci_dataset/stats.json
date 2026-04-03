@@ -1,0 +1,22 @@
+{
+  "n_total": 287,
+  "n_train": 229,
+  "n_val": 28,
+  "n_test": 30,
+  "n_unique_smiles": 287,
+  "fp_dim": 2048,
+  "prop_dim": 8,
+  "prop_names": [
+    "mw",
+    "logp",
+    "tpsa",
+    "hbd",
+    "hba",
+    "rotatable_bonds",
+    "rings",
+    "qed"
+  ],
+  "mean_mw": 163.57757491289198,
+  "std_mw": 61.12661846888838,
+  "lipinski_pass_rate": 0.9477351916376306
+}

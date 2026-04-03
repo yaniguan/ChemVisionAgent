@@ -54,7 +54,7 @@ _STATE = _AppState()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+async def lifespan(app: FastAPI):  # noqa: ARG001
     """Initialise the agent once at startup; clean up on shutdown."""
     cfg = AgentConfig()  # reads ANTHROPIC_API_KEY from env
     _STATE.agent = ChemVisionAgent(cfg)

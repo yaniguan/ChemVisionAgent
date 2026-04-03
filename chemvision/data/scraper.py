@@ -16,6 +16,9 @@ pypdf>=4.2, anthropic>=0.40, requests>=2.32, pillow>=10
 from __future__ import annotations
 
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 import io
 import json
 import re
@@ -104,8 +107,8 @@ class LiteratureScraper:
             try:
                 records = self._process_identifier(ident)
                 all_records.extend(records)
-            except Exception as exc:
-                print(f"[LiteratureScraper] Skipping {ident!r}: {exc}")
+            except (OSError, IOError, requests.RequestException, ValueError) as exc:
+                logger.warning("Skipping %r: %s", ident, exc)
             time.sleep(self.request_delay)
         return all_records
 
@@ -132,7 +135,7 @@ class LiteratureScraper:
         """
         url = self._resolve_url(doi_or_arxiv)
         if url is None:
-            print(f"[LiteratureScraper] Could not resolve URL for {doi_or_arxiv!r}")
+            logger.warning("Could not resolve URL for %r", doi_or_arxiv)
             return None
         try:
             resp = requests.get(
@@ -143,7 +146,7 @@ class LiteratureScraper:
             resp.raise_for_status()
             return resp.content
         except requests.RequestException as exc:
-            print(f"[LiteratureScraper] Failed to fetch {url}: {exc}")
+            logger.warning("Failed to fetch %s: %s", url, exc)
             return None
 
     def _resolve_url(self, ident: str) -> str | None:
@@ -184,8 +187,10 @@ class LiteratureScraper:
             for loc in data.get("oa_locations", []):
                 if loc.get("url_for_pdf"):
                     return loc["url_for_pdf"]
-        except Exception as exc:
-            print(f"[LiteratureScraper] Unpaywall lookup failed for {doi}: {exc}")
+        except (requests.RequestException, TimeoutError) as exc:
+            logger.warning("Unpaywall lookup failed for %s: %s", doi, exc)
+        except (json.JSONDecodeError, KeyError, ValueError) as exc:
+            logger.warning("Unpaywall response parse error for %s: %s", doi, exc)
         return None
 
     # ------------------------------------------------------------------
@@ -229,7 +234,8 @@ class LiteratureScraper:
                 break
             try:
                 page_images = page.images
-            except Exception:
+            except (OSError, ValueError) as exc:
+                logger.warning("Failed to extract images from page %d of %s: %s", page_num, source_id, exc)
                 continue
 
             for img in page_images:
@@ -255,7 +261,8 @@ class LiteratureScraper:
                             source_id=source_id,
                         )
                     )
-                except Exception:
+                except (OSError, ValueError) as exc:
+                    logger.warning("Failed to process image on page %d of %s: %s", page_num, source_id, exc)
                     continue
 
         return figures
@@ -415,8 +422,11 @@ class LiteratureScraper:
                     )
             return result
 
-        except Exception as exc:
-            print(f"[LiteratureScraper] Haiku parsing failed for figure {figure_num}: {exc}")
+        except (requests.RequestException, TimeoutError) as exc:
+            logger.error("Haiku API call failed for figure %s: %s", figure_num, exc)
+            return []
+        except (json.JSONDecodeError, KeyError, ValueError) as exc:
+            logger.warning("Haiku response parse error for figure %s: %s", figure_num, exc)
             return []
 
     # ------------------------------------------------------------------
@@ -465,7 +475,7 @@ class LiteratureScraper:
                         domain=ImageDomain.OTHER,
                         question=qa["question"],
                         answer=qa["answer"],
-                        difficulty=qa.get("difficulty"),  # type: ignore[arg-type]
+                        difficulty=str(qa.get("difficulty", "medium")),
                         source=source_tag,
                         metadata={
                             "source_id": ident,

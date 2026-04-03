@@ -24,6 +24,9 @@ No images needed for the base model — image encoder added in Phase 2.
 from __future__ import annotations
 
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -257,7 +260,7 @@ class CSCATrainer:
             result.loss_history.append(avg_loss)
 
             if verbose and epoch % 10 == 0:
-                print(f"  Epoch {epoch:3d} | loss={avg_loss:.4f}")
+                logger.info("Epoch %3d | loss=%.4f", epoch, avg_loss)
 
             # Early stopping
             if avg_loss < best_loss - 1e-4:

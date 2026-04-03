@@ -95,4 +95,5 @@ class ScherrerAnalyzer:
         results = [r for r in self.analyze_peaks(peaks) if r.valid and r.grain_size_nm]
         if not results:
             return None
-        return sum(r.grain_size_nm for r in results) / len(results)  # type: ignore[misc]
+        total = sum(float(r.grain_size_nm) for r in results)
+        return total / len(results)

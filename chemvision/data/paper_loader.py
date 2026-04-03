@@ -11,12 +11,15 @@ figures before running the agent.
 from __future__ import annotations
 
 import io
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import requests
 from PIL import Image as PILImage
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -117,8 +120,10 @@ def _resolve_doi(doi: str) -> str | None:
         for loc in data.get("oa_locations", []):
             if loc.get("url_for_pdf"):
                 return loc["url_for_pdf"]
-    except Exception:
-        pass
+    except (requests.RequestException, TimeoutError) as exc:
+        logger.error("Unpaywall lookup failed for DOI %s: %s", doi, exc)
+    except (KeyError, ValueError) as exc:
+        logger.warning("Unpaywall response parse error for DOI %s: %s", doi, exc)
     return None
 
 
@@ -174,7 +179,8 @@ def _extract_figures(
             break
         try:
             page_images = page.images
-        except Exception:
+        except (OSError, ValueError) as exc:
+            logger.warning("Failed to extract images from page %d: %s", page_num, exc)
             continue
 
         for img_obj in page_images:
@@ -194,7 +200,8 @@ def _extract_figures(
                         caption=captions.get(idx, ""),
                     )
                 )
-            except Exception:
+            except (OSError, ValueError) as exc:
+                logger.warning("Failed to process image on page %d: %s", page_num, exc)
                 continue
 
     return figures

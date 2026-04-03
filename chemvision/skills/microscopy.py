@@ -220,11 +220,7 @@ class MicroscopySkill(BaseSkill):
         stats_data = data.get("size_statistics")
         if isinstance(stats_data, dict):
             raw_dist = to_str(stats_data.get("distribution"), "unknown").lower()
-            distribution: Literal["monodisperse", "polydisperse", "bimodal", "unknown"] = (
-                raw_dist  # type: ignore[assignment]
-                if raw_dist in _VALID_DISTRIBUTIONS
-                else "unknown"
-            )
+            distribution = raw_dist if raw_dist in _VALID_DISTRIBUTIONS else "unknown"
             count_raw = stats_data.get("particle_count")
             size_statistics = SizeStatistics(
                 raw_output=raw,

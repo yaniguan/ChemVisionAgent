@@ -11,12 +11,15 @@ the downstream prediction pipeline can flag it as unphysical.
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 import spglib  # already installed
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -128,8 +131,8 @@ class CrystalSymmetryAnalyzer:
                     else []
                 )
             result.is_valid = True
-        except Exception:
-            pass
+        except (ValueError, TypeError, RuntimeError) as exc:
+            logger.warning("Symmetry analysis failed: %s", exc)
         return result
 
     def from_lattice_params(

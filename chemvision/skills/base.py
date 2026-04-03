@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from PIL.Image import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SkillResult(BaseModel):
@@ -15,7 +15,7 @@ class SkillResult(BaseModel):
     skill_name: str
     raw_output: str
     parsed: dict[str, Any] = {}
-    confidence: float | None = None
+    confidence: float | None = Field(None, ge=0.0, le=1.0)
 
 
 class BaseSkill(ABC):

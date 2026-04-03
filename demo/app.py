@@ -321,7 +321,7 @@ with tab_agent:
                         step_dict = event.model_dump(mode="json")
                         steps_rendered.append(step_dict)
                         _render_step(step_dict)
-            except Exception as exc:
+            except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
                 status.update(label="Agent error", state="error")
                 st.error(f"Agent error: {exc}")
                 st.stop()
@@ -685,7 +685,7 @@ with tab_crystal:
                             st.caption(f"Hall symbol: {sym_result.hall_symbol}")
                     else:
                         st.error("Symmetry analysis failed — check that the structure is physically valid.")
-            except Exception as exc:
+            except (ValueError, TypeError, OSError, KeyError) as exc:
                 st.error(f"Parse error: {exc}")
 
     # ── Scherrer ──────────────────────────────────────────────────────────
@@ -759,7 +759,7 @@ with tab_crystal:
                     ax3.grid(True, alpha=0.3, axis="y")
                     st.pyplot(fig3)
                     plt.close()
-            except Exception as exc:
+            except (ValueError, TypeError, OSError, KeyError) as exc:
                 st.error(f"Error: {exc}")
 
 

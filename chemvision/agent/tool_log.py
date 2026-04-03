@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -20,11 +20,11 @@ class ToolCallLog(BaseModel):
         ..., description="Human-readable summary of the skill output."
     )
     confidence: float | None = Field(
-        None, description="Confidence score returned by the skill (0–1)."
+        None, ge=0.0, le=1.0, description="Confidence score returned by the skill (0–1)."
     )
     low_confidence: bool = Field(
         False,
         description="True when confidence is below the agent's configured threshold.",
     )
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     raw_output: str = Field("", description="Raw text returned by the vision model.")

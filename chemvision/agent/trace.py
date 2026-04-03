@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -22,7 +22,7 @@ class AgentStep(BaseModel):
     step_type: StepType
     content: str
     skill_name: str | None = None  # populated for ACTION steps
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class AgentTrace(BaseModel):
@@ -32,7 +32,7 @@ class AgentTrace(BaseModel):
     image_paths: list[str] = Field(default_factory=list)
     steps: list[AgentStep] = Field(default_factory=list)
     final_answer: str | None = None
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: datetime | None = None
 
     def append(self, step: AgentStep) -> None:

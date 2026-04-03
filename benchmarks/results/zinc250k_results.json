@@ -1,0 +1,191 @@
+{
+  "main_results": {
+    "Random SELFIES": {
+      "validity": 1.0,
+      "uniqueness": 0.908,
+      "novelty": 1.0,
+      "int_div": 0.9824392899843981,
+      "fcd": 2.9993127674015225,
+      "qed": 0.2786139866962178
+    },
+    "Train Resample": {
+      "validity": 1.0,
+      "uniqueness": 0.945,
+      "novelty": 0.0,
+      "int_div": 0.8791384689361643,
+      "fcd": 0.17744030112731646,
+      "qed": 0.7379949266918281
+    },
+    "SMILES Random Walk": {
+      "validity": 0.0,
+      "uniqueness": 0.0,
+      "novelty": 0.0,
+      "int_div": 0.0,
+      "fcd": 0.0,
+      "qed": 0.0
+    },
+    "Ours: Greedy (T=0.3)": {
+      "validity": 1.0,
+      "uniqueness": 0.985,
+      "novelty": 1.0,
+      "int_div": 0.8792764470907908,
+      "fcd": 1.334216268065981,
+      "qed": 0.6544777567853903
+    },
+    "Ours: Temperature (T=1.0)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.9022528155112064,
+      "fcd": 1.1885149725602955,
+      "qed": 0.5859728279508363
+    },
+    "Ours: Top-k (k=20)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.8942320373945508,
+      "fcd": 1.0903345541621619,
+      "qed": 0.6157702375316804
+    },
+    "Ours: Nucleus (p=0.9)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.886916176457439,
+      "fcd": 1.0716778620462402,
+      "qed": 0.6339012631887613
+    },
+    "Ours: Nucleus+TopK": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.8861386617940051,
+      "fcd": 1.1234442754315854,
+      "qed": 0.6434348354156734
+    }
+  },
+  "ablation": {
+    "embed_dim=64": {
+      "loss": 1.4798889667429822,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "embed_dim=128": {
+      "loss": 1.2694545705267724,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "embed_dim=256": {
+      "loss": 1.0493397763434877,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "n_layers=1": {
+      "loss": 1.4417881027181099,
+      "validity": 1.0,
+      "uniqueness": 0.98,
+      "novelty": 1.0
+    },
+    "n_layers=2": {
+      "loss": 1.3156412789162168,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "n_layers=3": {
+      "loss": 1.2694545705267724,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "n_layers=4": {
+      "loss": 1.229450986740437,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "conditioned=True": {
+      "loss": 1.2694545705267724,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    },
+    "conditioned=False": {
+      "loss": 1.3336744714290538,
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0
+    }
+  },
+  "sampling": {
+    "Greedy (T=0.3)": {
+      "validity": 1.0,
+      "uniqueness": 0.985,
+      "novelty": 1.0,
+      "int_div": 0.8792764470907908,
+      "fcd": 1.334216268065981,
+      "qed": 0.6544777567853903
+    },
+    "Temperature (T=1.0)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.9022528155112064,
+      "fcd": 1.1885149725602955,
+      "qed": 0.5859728279508363
+    },
+    "Top-k (k=20)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.8942320373945508,
+      "fcd": 1.0903345541621619,
+      "qed": 0.6157702375316804
+    },
+    "Nucleus (p=0.9)": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.886916176457439,
+      "fcd": 1.0716778620462402,
+      "qed": 0.6339012631887613
+    },
+    "Nucleus+TopK": {
+      "validity": 1.0,
+      "uniqueness": 1.0,
+      "novelty": 1.0,
+      "int_div": 0.8861386617940051,
+      "fcd": 1.1234442754315854,
+      "qed": 0.6434348354156734
+    }
+  },
+  "encoders": {
+    "Morgan FP (2048)": {
+      "dim": 2048,
+      "time_s": 0.1971880000201054,
+      "mean_norm": 6.672611236572266
+    },
+    "GIN (128)": {
+      "dim": 128,
+      "time_s": 0.32431050000013784,
+      "mean_norm": 0.6375372409820557
+    },
+    "SchNet (128)": {
+      "dim": 128,
+      "time_s": 0.3219919999828562,
+      "mean_norm": 1.7457690238952637
+    }
+  },
+  "training": {
+    "epochs": 30,
+    "loss": 0.8212123250961304,
+    "vocab_size": 71,
+    "time_s": 3520.034055041964,
+    "n_train": 9600,
+    "best_sampling": "Temperature (T=1.0)"
+  }
+}

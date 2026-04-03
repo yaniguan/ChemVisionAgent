@@ -17,6 +17,9 @@ Optional flags
 from __future__ import annotations
 
 import argparse
+import logging
+
+logger = logging.getLogger(__name__)
 import json
 import sys
 from pathlib import Path
@@ -149,38 +152,38 @@ def main(argv: list[str] | None = None) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # ---- Load data -------------------------------------------------------
-    print(f"[audit] Loading dataset from {args.dataset} …")
+    logger.info(" Loading dataset from {args.dataset} …")
     records = _load_records(Path(args.dataset))
-    print(f"[audit] Loaded {len(records)} records.")
+    logger.info(" Loaded {len(records)} records.")
 
     # ---- Load model ------------------------------------------------------
-    print(f"[audit] Loading model '{args.model}' (backend={args.backend}) …")
+    logger.info(" Loading model '{args.model}' (backend={args.backend}) …")
     model = _load_model(args.model, args.backend)
-    print(f"[audit] Model ready: {model!r}")
+    logger.info(" Model ready: {model!r}")
 
     # ---- Capability matrix -----------------------------------------------
     from chemvision.audit.matrix import CapabilityMatrix, MatrixConfig
 
-    print("[audit] Running CapabilityMatrix evaluation …")
+    logger.info(" Running CapabilityMatrix evaluation …")
     matrix_cfg = MatrixConfig(output_dir=output_dir, score_fn=args.score_fn)
     matrix = CapabilityMatrix(matrix_cfg).run_evaluation(model, records)
 
     # Print quick summary
-    print("[audit] Capability matrix:")
+    logger.info(" Capability matrix:")
     for task in matrix.TASK_TYPES:
         row = {d: matrix.get_score(task, d) for d in matrix.DIFFICULTIES}
         row_str = "  ".join(
             f"{d[:3]}={v:.2f}" if v == v else f"{d[:3]}=N/A"
             for d, v in row.items()
         )
-        print(f"  {task:<30} {row_str}")
+        logger.info("  %s %s", task.ljust(30), row_str)
 
     # ---- Degradation testing ---------------------------------------------
     envelope = None
     if not args.no_degrade:
         from chemvision.audit.degradation import DegradationConfig, DegradationTester
 
-        print(f"[audit] Running DegradationTester (threshold={args.threshold}) …")
+        logger.info(" Running DegradationTester (threshold={args.threshold}) …")
         deg_cfg = DegradationConfig(
             threshold=args.threshold,
             seed=args.seed,
@@ -189,28 +192,26 @@ def main(argv: list[str] | None = None) -> None:
         tester = DegradationTester(deg_cfg)
         envelope = tester.run(model, records)
 
-        print("[audit] Reliability envelope:")
+        logger.info(" Reliability envelope:")
         for dtype, res in envelope.results.items():
-            print(
-                f"  {dtype:<22} critical={res.critical_param:.2f} "
-                f"{res.param_unit:<14} robustness={res.robustness_label}"
-            )
+            logger.info("  %-22s critical=%.2f %-14s robustness=%s",
+                        dtype, res.critical_param, res.param_unit, res.robustness_label)
     else:
-        print("[audit] Degradation testing skipped (--no-degrade).")
+        logger.info(" Degradation testing skipped (--no-degrade).")
 
     # ---- Generate report -------------------------------------------------
     from chemvision.audit.report_generator import AuditReportGenerator
 
-    print("[audit] Generating audit report …")
+    logger.info(" Generating audit report …")
     gen = AuditReportGenerator(matrix, envelope)
     report_path = gen.generate(output_dir=output_dir)
-    print(f"[audit] Report written to: {report_path}")
+    logger.info(" Report written to: {report_path}")
 
     envelope_path = output_dir / "reliability_envelope.json"
     if envelope_path.exists():
-        print(f"[audit] Reliability envelope written to: {envelope_path}")
+        logger.info(" Reliability envelope written to: {envelope_path}")
 
-    print("[audit] Done.")
+    logger.info(" Done.")
 
 
 if __name__ == "__main__":

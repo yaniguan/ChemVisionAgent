@@ -17,6 +17,7 @@ ase>=3.23, matplotlib>=3.8, numpy>=1.26
 
 from __future__ import annotations
 
+import logging
 import random
 import re
 from dataclasses import dataclass, field
@@ -26,6 +27,8 @@ from typing import Any, Callable, Literal, NamedTuple
 import numpy as np
 
 from chemvision.data.schema import ImageDomain, ImageRecord
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +66,8 @@ class ParsedStructure:
                 f = self.atoms.get_forces()
                 if f is not None and len(f) > 0:
                     self.forces = np.asarray(f)
-            except Exception:
-                pass
+            except (RuntimeError, ValueError):
+                pass  # forces not available in this structure — expected
 
     # ---- derived properties -----------------------------------------------
 
@@ -104,7 +107,8 @@ class ParsedStructure:
     @property
     def lattice_angles(self) -> tuple[float, float, float]:
         """(α, β, γ) in degrees."""
-        return tuple(float(x) for x in self.atoms.cell.angles())  # type: ignore[return-value]
+        angles = [float(x) for x in self.atoms.cell.angles()]
+        return (angles[0], angles[1], angles[2])
 
     @property
     def volume(self) -> float:
@@ -125,13 +129,15 @@ class ParsedStructure:
     def mean_force_magnitude(self) -> float | None:
         if not self.has_forces:
             return None
-        return float(np.mean(np.linalg.norm(self.forces, axis=1)))  # type: ignore[arg-type]
+        forces = np.asarray(self.forces)
+        return float(np.mean(np.linalg.norm(forces, axis=1)))
 
     @property
     def max_force_magnitude(self) -> float | None:
         if not self.has_forces:
             return None
-        return float(np.max(np.linalg.norm(self.forces, axis=1)))  # type: ignore[arg-type]
+        forces = np.asarray(self.forces)
+        return float(np.max(np.linalg.norm(forces, axis=1)))
 
 
 # ---------------------------------------------------------------------------
@@ -258,12 +264,12 @@ def _build_template_pool(
         templates.extend([
             (
                 "What is the total DFT energy of this structure in eV?",
-                lambda s: f"{s.total_energy:.4f} eV",  # type: ignore[union-attr]
+                lambda s: f"{s.total_energy:.4f} eV" if s.total_energy is not None else "N/A",
                 "medium",
             ),
             (
                 "What is the DFT energy per atom of this structure in eV/atom?",
-                lambda s: f"{s.total_energy / s.n_atoms:.4f} eV/atom",  # type: ignore[operator]
+                lambda s: f"{s.total_energy / s.n_atoms:.4f} eV/atom" if s.total_energy is not None else "N/A",
                 "medium",
             ),
         ])
@@ -273,17 +279,17 @@ def _build_template_pool(
         templates.extend([
             (
                 "What is the mean force magnitude on all atoms in eV/Å?",
-                lambda s: f"{s.mean_force_magnitude:.4f} eV/Å",  # type: ignore[union-attr]
+                lambda s: f"{s.mean_force_magnitude:.4f} eV/Å" if s.mean_force_magnitude is not None else "N/A",
                 "hard",
             ),
             (
                 "What is the maximum atomic force magnitude in eV/Å?",
-                lambda s: f"{s.max_force_magnitude:.4f} eV/Å",  # type: ignore[union-attr]
+                lambda s: f"{s.max_force_magnitude:.4f} eV/Å" if s.max_force_magnitude is not None else "N/A",
                 "hard",
             ),
         ])
 
-    return templates  # type: ignore[return-value]
+    return templates
 
 
 # ---------------------------------------------------------------------------
@@ -430,16 +436,16 @@ class SyntheticGenerator:
         energy: float | None = None
         try:
             energy = float(atoms.get_potential_energy())
-        except Exception:
-            pass
+        except (RuntimeError, ValueError):
+            pass  # energy not available in this OUTCAR
 
         forces: np.ndarray | None = None
         try:
             f = atoms.get_forces()
             if f is not None:
                 forces = np.asarray(f)
-        except Exception:
-            pass
+        except (RuntimeError, ValueError):
+            pass  # forces not available in this OUTCAR
 
         return ParsedStructure(
             atoms=atoms,
@@ -481,8 +487,8 @@ class SyntheticGenerator:
             f = atoms.get_forces()
             if f is not None:
                 forces = np.asarray(f)
-        except Exception:
-            pass
+        except (RuntimeError, ValueError):
+            pass  # forces not available in this LAMMPS dump
 
         return ParsedStructure(
             atoms=atoms,
@@ -604,7 +610,8 @@ class SyntheticGenerator:
                 try:
                     answer = ans_fn(structure)
                     all_pairs.append(QAPair(question=question, answer=answer, difficulty=diff))
-                except Exception:
+                except (ValueError, TypeError, AttributeError) as exc:
+                    logger.warning("QA template failed for %r: %s", question[:50], exc)
                     continue
 
         return all_pairs

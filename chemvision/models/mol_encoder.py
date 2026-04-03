@@ -18,10 +18,13 @@ Architecture
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 # RDKit (required)
 from rdkit import Chem
@@ -144,7 +147,8 @@ class MolecularEncoder:
         try:
             result = self._unimol.get_repr([smiles], return_atomic_reprs=False)
             return np.array(result["cls_repr"][0], dtype=np.float32)
-        except Exception:
+        except (RuntimeError, ValueError, KeyError) as exc:
+            logger.warning("Uni-Mol encoding failed for %r, falling back to Morgan: %s", smiles, exc)
             return self._encode_morgan(smiles)
 
     # ------------------------------------------------------------------
@@ -228,8 +232,10 @@ class MolecularEncoder:
         try:
             from rdkit.Chem import QED
             desc.qed = QED.qed(mol)
-        except Exception:
+        except ImportError:
             pass
+        except ValueError as exc:
+            logger.warning("QED computation failed for %r: %s", smiles, exc)
 
         # SA score (Ertl & Schuffenhauer) — available via rdkit.Contrib.SA_Score
         try:
@@ -238,8 +244,10 @@ class MolecularEncoder:
             import importlib
             sa_mod = importlib.import_module("rdkit.Contrib.SA_Score.sascorer")
             desc.sa_score = sa_mod.calculateScore(mol)
-        except Exception:
+        except ImportError:
             pass
+        except ValueError as exc:
+            logger.warning("SA score computation failed for %r: %s", smiles, exc)
 
         return desc
 

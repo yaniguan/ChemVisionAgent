@@ -1,0 +1,162 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Mypy
+        run: mypy chemvision
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run tests with coverage
+        run: |
+          pytest --cov=chemvision --cov-report=xml --cov-report=html --cov-fail-under=80 -m "not network"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Smoke test - import and basic e2e
+        run: |
+          python -c "
+          import chemvision
+          print('Import OK')
+
+          from rdkit import Chem
+          from rdkit.Chem import Descriptors
+
+          # Build a small vocab from 10 SMILES
+          smiles_list = [
+              'CCO', 'CC(=O)O', 'c1ccccc1', 'CC(=O)Oc1ccccc1C(=O)O',
+              'C(=O)N', 'CC(C)CC1=CC=C(C=C1)C(C)C(=O)O', 'CCN(CC)CC',
+              'O=C(O)C(N)CC1=CC=CC=C1', 'CC1=CC=CC=C1', 'CCCC'
+          ]
+          mols = [Chem.MolFromSmiles(s) for s in smiles_list]
+          assert all(m is not None for m in mols), 'Failed to parse SMILES'
+
+          # Generate 1 molecule and compute basic metrics
+          mol = mols[0]
+          mw = Descriptors.MolWt(mol)
+          logp = Descriptors.MolLogP(mol)
+          print(f'Generated mol MW={mw:.2f}, LogP={logp:.2f}')
+          assert mw > 0, 'Invalid molecular weight'
+
+          # Validate new modules are importable
+          from chemvision.generation.selfies_gen import SELFIESGenConfig
+          cfg = SELFIESGenConfig()
+          assert cfg.cond_dim == 8, 'Default cond_dim should be 8'
+          print(f'SELFIESGenConfig OK: embed_dim={cfg.embed_dim}, n_layers={cfg.n_layers}')
+
+          from chemvision.models.gnn import smiles_to_graph
+          g = smiles_to_graph('CCO')
+          assert g is not None, 'smiles_to_graph returned None for CCO'
+          assert g['n_atoms'] == 3, f'Expected 3 atoms, got {g[\"n_atoms\"]}'
+          assert g['x'].shape == (3, 37), f'Unexpected feature shape: {g[\"x\"].shape}'
+          print(f'smiles_to_graph OK: {g[\"n_atoms\"]} atoms, {g[\"edge_index\"].shape[1]} edges')
+
+          from chemvision.eval.moses_metrics import MOSESMetrics
+          m = MOSESMetrics()
+          assert hasattr(m, 'validity')
+          assert hasattr(m, 'uniqueness')
+          assert hasattr(m, 'novelty')
+          print('MOSESMetrics OK')
+
+          print('Smoke test passed')
+          "

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -49,7 +49,7 @@ class AnalysisReport(BaseModel):
     )
 
     num_steps: int = Field(0, description="Total number of ReAct steps taken.")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Full reasoning trace (thought + action + observation steps)
     trace_steps: list[dict[str, Any]] = Field(

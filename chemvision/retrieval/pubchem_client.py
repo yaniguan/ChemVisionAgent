@@ -7,10 +7,13 @@ All calls are synchronous and cached in-memory to avoid hammering the service.
 from __future__ import annotations
 
 import functools
+import logging
 import time
 from typing import Any
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 _BASE = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 _PROPS = (
@@ -94,7 +97,11 @@ class PubChemClient:
             resp.raise_for_status()
             table = resp.json()["PropertyTable"]["Properties"]
             return dict(table[0]) if table else {}
-        except Exception:
+        except (requests.RequestException, TimeoutError) as exc:
+            logger.error("PubChem request failed for %s/%s: %s", id_type, identifier, exc)
+            return {}
+        except (KeyError, ValueError) as exc:
+            logger.warning("PubChem response parse error for %s/%s: %s", id_type, identifier, exc)
             return {}
 
     def _similar_cids(self, smiles: str, threshold: int, max_results: int) -> list[int]:
@@ -107,5 +114,9 @@ class PubChemClient:
             resp = self._session.get(url, timeout=self.timeout)
             resp.raise_for_status()
             return resp.json()["IdentifierList"]["CID"][:max_results]
-        except Exception:
+        except (requests.RequestException, TimeoutError) as exc:
+            logger.error("PubChem similarity search failed for %r: %s", smiles, exc)
+            return []
+        except (KeyError, ValueError) as exc:
+            logger.warning("PubChem similarity response parse error: %s", exc)
             return []

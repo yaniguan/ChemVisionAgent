@@ -15,10 +15,13 @@ have a uniform interface regardless of which backend ran.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -104,7 +107,8 @@ class PropertyPredictor:
             result.energy_ev = float(atoms.get_potential_energy())
             result.forces_ev_ang = atoms.get_forces().tolist()
             result.backend = "mace-mp-0"
-        except Exception as exc:
+        except RuntimeError as exc:
+            logger.error("MACE inference failed for %s: %s", smiles, exc)
             result.warnings.append(f"MACE inference failed: {exc}")
             result.backend = "mace-failed"
 
@@ -162,7 +166,10 @@ class PropertyPredictor:
                     result.synthesisability = "very_hard"
 
             result.backend = "rdkit"
-        except Exception as exc:
+        except ImportError:
+            result.warnings.append("RDKit not available")
+        except ValueError as exc:
+            logger.warning("RDKit prediction failed for %r: %s", smiles, exc)
             result.warnings.append(f"RDKit prediction failed: {exc}")
 
     @staticmethod
@@ -171,8 +178,10 @@ class PropertyPredictor:
             import importlib
             sa = importlib.import_module("rdkit.Contrib.SA_Score.sascorer")
             return float(sa.calculateScore(mol))
-        except Exception:
+        except ImportError:
             pass
+        except ValueError as exc:
+            logger.warning("SA score calculator raised ValueError: %s", exc)
         # Fallback: simple heuristic (ring count + stereocenters)
         try:
             from rdkit.Chem import rdMolDescriptors
@@ -181,7 +190,8 @@ class PropertyPredictor:
             # rough mapping: 0-2 rings + no stereo = easy
             sa_approx = 1.0 + rings * 0.5 + stereo * 0.8
             return min(sa_approx, 10.0)
-        except Exception:
+        except (ImportError, ValueError) as exc:
+            logger.warning("SA score heuristic fallback failed: %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -195,5 +205,5 @@ class PropertyPredictor:
             self._mace_calc = mace_mp(model="small", dispersion=False, default_dtype="float32", device=device)
         except ImportError:
             pass
-        except Exception:
-            pass  # e.g. CUDA not available
+        except RuntimeError as exc:
+            logger.warning("MACE loading failed (e.g. CUDA not available): %s", exc)
